@@ -1,79 +1,56 @@
-"""heha-movers - Client-Side UI."""
+"""Heha Movers — marketplace application shell authored in Jac."""
+sv import from endpoints { marketplace }
+import from .components.Marketplace { MoverCard, BookingCard, money }
+import from .components.Hero { Hero }
 
-import from .components.MessageCard { MessageCard }
-
-sv import from endpoints { Message, PostMessage, ListMessages }
-
-def:pub app -> JsxElement {
-    has messages: list[Message] = [],
-        author: str = "",
-        text: str = "";
-
-    # Load existing messages once, when the component first mounts.
-    can with entry {
-        loadMessages();
+def:pub app() -> JsxElement {
+    has page: str = "discover", movers: list[dict] = [], bookings: list[dict] = [], ownMover: list[dict] = [], matches: list[dict] = [], trace: list[str] = [];
+    has user: dict = {}, session: str = "", busy: bool = False, error: str = "", notice: str = "", demo: bool = False;
+    has pickup: str = "Nairobi", destination: str = "", moveDate: str = "", size: str = "2", budget: str = "20000", packing: bool = True, notes: str = "", query: str = "";
+    has authMode: str = "login", email: str = "", password: str = "", name: str = "", accountRole: str = "customer", serviceArea: str = "Nairobi";
+    has companyName: str = "", companyArea: str = "", companyBio: str = "", companyRate: str = "5000", companyCapacity: str = "3", companyServices: str = "packing,assembly";
+    async can with entry {
+        try {
+            action = "browse"; data: dict = {}; token = "";
+            response = await marketplace(action, data, token);
+            if response["ok"] { movers = response["data"]["movers"] as list[dict]; demo = response["data"]["demo"] as bool; }
+            saved = sessionStorage.getItem("heha_session");
+            if saved { session = saved; await refresh(saved); }
+        } except Exception { error = "Could not connect to Heha. Please refresh and try again."; }
     }
-
-    async def loadMessages -> None;
-    async def postMessage(e: FormEvent) -> None;
-
-    return
-        <div
-            style={{
-                "maxWidth": "600px",
-                "margin": "2rem auto",
-                "padding": "0 1rem",
-                "fontFamily": "system-ui, -apple-system, sans-serif",
-                "color": "#1a1a2e"
-            }}
-        >
-            <h1>heha-movers</h1>
-            <p style={{"color": "#666"}}>A tiny full-stack guestbook in Jac.</p>
-            <form
-                onSubmit={postMessage}
-                style={{"display": "flex", "gap": "0.5rem", "marginBottom": "1.5rem"}}
-            >
-                <input
-                    type="text"
-                    value={author}
-                    onChange={lambda e: ChangeEvent { author = e.target.value; }}
-                    placeholder="Name"
-                    style={{
-                        "flex": "1",
-                        "padding": "0.6rem",
-                        "border": "1px solid #ddd",
-                        "borderRadius": "6px"
-                    }}
-                />
-                <input
-                    type="text"
-                    value={text}
-                    onChange={lambda e: ChangeEvent { text = e.target.value; }}
-                    placeholder="Say something..."
-                    style={{
-                        "flex": "2",
-                        "padding": "0.6rem",
-                        "border": "1px solid #ddd",
-                        "borderRadius": "6px"
-                    }}
-                />
-                <button
-                    type="submit"
-                    style={{
-                        "padding": "0.6rem 1.2rem",
-                        "backgroundColor": "#4CAF50",
-                        "color": "white",
-                        "border": "none",
-                        "borderRadius": "6px",
-                        "cursor": "pointer"
-                    }}
-                >
-                    Post
-                </button>
-            </form>
-            {[
-                <MessageCard key={idx} author={msg.author} text={msg.text}/>
-                for (idx, msg) in enumerate(messages)
-            ]}
-        </div>;
+    async def refresh(token: str);
+    async def perform(action: str, data: dict);
+    async def authenticate(loginEmail: str, loginPassword: str, mode: str);
+    async def logout();
+    async def findMatches(e: FormEvent);
+    async def postMove(e: FormEvent);
+    def navigate(target: str) { page = target; error = ""; notice = ""; }
+    role = str(user["role"]) if user["role"] else "guest";
+    visible = [m for m in movers if m["verified"] and (not query or query.lower() in (str(m["name"]) + " " + str(m["area"])).lower())];
+    active = [b for b in bookings if b["status"] not in ["completed", "cancelled"]];
+    return <div className="app-shell">
+        <header className="site-header"><a href="#" className="brand" onClick={lambda e: MouseEvent { e.preventDefault(); navigate("discover"); }}><span className="brand-mark">h↗</span><span>heha<span className="brand-sub">MOVERS</span></span></a>
+            <nav aria-label="Main navigation"><button className={"nav-link active" if page in ["discover", "matches"] else "nav-link"} onClick={lambda { navigate("discover"); }}>Find a mover</button><button className={"nav-link active" if page == "how" else "nav-link"} onClick={lambda { navigate("how"); }}>How it works</button>{session and <button className={"nav-link active" if page == "dashboard" else "nav-link"} onClick={lambda { navigate("dashboard"); }}>Dashboard</button>}</nav>
+            <div className="header-actions">{<><span className="user-name">{user["name"]}</span><button className="btn btn-outline" onClick={logout}>Sign out</button></> if session else <><button className="nav-link" onClick={lambda { authMode = "login"; navigate("auth"); }}>Log in</button><button className="btn btn-dark" onClick={lambda { authMode = "register"; accountRole = "mover"; navigate("auth"); }}>Become a partner ↗</button></>}</div>
+        </header>
+        {demo and <div className="demo-banner"><span className="live-dot"></span> HACKATHON DEMO <span>Real marketplace workflow. Sample movers. Simulated payments.</span></div>}
+        <main>
+        {(error or notice) and <div className={"alert alert-error" if error else "alert alert-success"} role={"alert" if error else "status"}>{error or notice}<button aria-label="Dismiss notification" onClick={lambda { error = ""; notice = ""; }}>×</button></div>}
+        {page == "discover" and <><Hero/>
+            <section className="search-section"><div><span className="eyebrow">LET’S GET YOU MOVING</span><h2>Find your right-fit moving crew.</h2></div><form className="match-form" onSubmit={findMatches}><label>Moving from<input aria-label="Moving from" value={pickup} placeholder="e.g. Kilimani, Nairobi" required onChange={lambda e: ChangeEvent { pickup = e.target.value; }}/></label><label>Home size<select aria-label="Home size" value={size} onChange={lambda e: ChangeEvent { size = e.target.value; }}>{[<option key={n} value={str(n)}>{n} room(s)</option> for n in [1, 2, 3, 4, 5, 6]]}</select></label><label>Budget (KES)<input aria-label="Matching budget" type="number" min="0" max="1000000" value={budget} onChange={lambda e: ChangeEvent { budget = e.target.value; }}/></label><button className="btn btn-dark" disabled={busy} type="submit">{"Finding your fit…" if busy else "Find my movers ↗"}</button><label className="check-label"><input type="checkbox" checked={packing} onChange={lambda e: ChangeEvent { packing = e.target.checked; }}/> I need help packing</label></form></section>
+            <section className="section"><div className="section-heading"><div><span className="eyebrow">GOOD PEOPLE. GREAT MOVES.</span><h2>Meet your moving partners.</h2><p className="muted">Independent local teams, ready for your next chapter.</p></div><label className="filter-input"><span>⌕</span><input aria-label="Search movers" placeholder="Search name or city" value={query} onChange={lambda e: ChangeEvent { query = e.target.value; }}/></label></div><div className="mover-grid">{[<MoverCard key={m["id"]} mover={m} index={i}/> for (i, m) in enumerate(visible)]}</div>{len(visible) == 0 and <div className="empty-state">No matching movers yet. Try another city or clear your search.</div>}</section>
+            <section className="cta-band"><div><span className="eyebrow">YOUR MOVE, MADE SIMPLE</span><h2>One request. More possibilities.</h2><p>Tell us what you need. Let verified moving companies come to you.</p></div><button className="btn btn-cream" onClick={lambda { navigate("request" if role == "customer" else "auth"); }}>Plan my move ↗</button></section>
+        </>}
+        {page == "matches" and <section className="section page-section"><div className="section-heading"><div><span className="eyebrow">HEHA MATCH AGENT</span><h1 className="page-title">A little guidance.<br/>A better fit.</h1><p className="muted">Ranked for {pickup} · {size} room(s) · {money(budget)} budget</p></div><button className="btn btn-dark" onClick={lambda { navigate("request" if role == "customer" else "auth"); }}>Request firm quotes ↗</button></div><div className="agent-trace"><span className="agent-symbol">✳</span><div><strong>Here’s how your shortlist was made</strong><ol>{[<li key={line}>{line}</li> for line in trace]}</ol><p className="small">Transparent, rule-based Jac graph agent. No LLM or hidden pricing. Estimates are not binding quotes.</p></div></div><div className="mover-grid">{[<MoverCard key={m["id"]} mover={m} index={i} matched={True}/> for (i, m) in enumerate(matches)]}</div>{len(matches) == 0 and <div className="empty-state">No verified mover meets these requirements. Try fewer rooms or adjust packing needs.</div>}</section>}
+        {page == "auth" and <section className="auth-layout"><div className="auth-copy"><span className="eyebrow">WELCOME TO YOUR NEXT CHAPTER</span><h1>A good move<br/>starts <em>here.</em></h1><p>Find your crew. Compare your options.<br/>Keep every step in one place.</p><div className="auth-art">⌂ <span>→</span> ⌂</div><p className="small">Built in Jac. Made for Kenya.</p></div><div className="auth-panel"><div className="tabs"><button className={"selected" if authMode == "login" else ""} onClick={lambda { authMode = "login"; }}>Log in</button><button className={"selected" if authMode == "register" else ""} onClick={lambda { authMode = "register"; }}>Create account</button></div><h2>{"Welcome back." if authMode == "login" else "Let’s get you started."}</h2><p className="muted">Your moving journey, all in one place.</p><form onSubmit={lambda e: FormEvent { e.preventDefault(); authenticate(email, password, authMode); }}>{authMode == "register" and <><label>Full name / company name<input required value={name} maxLength={80} onChange={lambda e: ChangeEvent { name = e.target.value; }}/></label><label>I am a<select value={accountRole} onChange={lambda e: ChangeEvent { accountRole = e.target.value; }}><option value="customer">Customer — planning a move</option><option value="mover">Mover — offering moving services</option></select></label>{accountRole == "mover" and <label>Service city<input value={serviceArea} onChange={lambda e: ChangeEvent { serviceArea = e.target.value; }}/></label>}</>}<label>Email address<input type="email" required autoComplete="email" value={email} onChange={lambda e: ChangeEvent { email = e.target.value; }}/></label><label>Password<input type="password" required minLength={10} autoComplete={"current-password" if authMode == "login" else "new-password"} value={password} onChange={lambda e: ChangeEvent { password = e.target.value; }}/></label><button className="btn btn-dark full-width" disabled={busy} type="submit">{"Please wait…" if busy else ("Log in ↗" if authMode == "login" else "Create account ↗")}</button></form>{demo and <div className="demo-accounts"><span className="eyebrow">TAKE IT FOR A TEST MOVE</span><p className="small muted">Use a seeded demo account. No signup needed.</p><div className="demo-buttons">{[<button key={r} className="btn btn-outline btn-small" disabled={busy} onClick={lambda { authenticate(r + "@heha.demo", "HehaDemo2026!", "login"); }}>{r.capitalize()} demo ↗</button> for r in ["customer", "mover", "admin"]]}</div></div>}</div></section>}
+        {page == "request" and <section className="section page-section narrow"><span className="eyebrow">PLAN YOUR NEXT CHAPTER</span><h1 className="page-title">Tell us about your move.</h1><p className="muted">Your request reaches verified movers. You choose the quote that works for you.</p>{role != "customer" and <div className="empty-state">Sign in with a customer account to request a move.<button className="btn" onClick={lambda { navigate("auth"); }}>Sign in</button></div>}{role == "customer" and <form className="request-form panel" onSubmit={postMove}><div className="form-grid"><label>Pickup location<input aria-label="Pickup location" required maxLength={120} value={pickup} onChange={lambda e: ChangeEvent { pickup = e.target.value; }}/></label><label>Destination<input aria-label="Destination" required maxLength={120} value={destination} placeholder="e.g. Ruaka, Kiambu" onChange={lambda e: ChangeEvent { destination = e.target.value; }}/></label><label>Moving date<input aria-label="Moving date" required type="date" value={moveDate} onChange={lambda e: ChangeEvent { moveDate = e.target.value; }}/></label><label>Home size<select value={size} onChange={lambda e: ChangeEvent { size = e.target.value; }}>{[<option key={n} value={str(n)}>{n} room(s)</option> for n in [1, 2, 3, 4, 5, 6]]}</select></label><label>Budget (KES)<input aria-label="Move budget" required type="number" min="1000" max="1000000" value={budget} onChange={lambda e: ChangeEvent { budget = e.target.value; }}/></label><label className="check-label"><input type="checkbox" checked={packing} onChange={lambda e: ChangeEvent { packing = e.target.checked; }}/> Include packing service</label></div><label>Inventory and access notes<textarea aria-label="Inventory notes" value={notes} maxLength={1000} placeholder="Sofa, fridge, 12 boxes. Third floor, no lift. Any fragile items?" onChange={lambda e: ChangeEvent { notes = e.target.value; }}/></label><div className="form-footer"><p className="small muted">No payment required to post a request.<br/>Confirm scope and insurance with your mover before accepting.</p><button className="btn btn-dark" disabled={busy} type="submit">{"Posting…" if busy else "Request quotes ↗"}</button></div></form>}</section>}
+        {page == "dashboard" and session and <section className="section page-section"><div className="section-heading"><div><span className="eyebrow">{role.upper()} WORKSPACE</span><h1 className="page-title">{"Your next chapter, organised." if role == "customer" else ("Good work starts here." if role == "mover" else "Keep the marketplace moving.")}</h1><p className="muted">Welcome, {user["name"]}. Every quote and every step, in one place.</p></div><div className="action-group"><button className="btn btn-outline" disabled={busy} onClick={lambda { refresh(session); }}>Refresh ↻</button>{role == "customer" and <button className="btn btn-dark" onClick={lambda { navigate("request"); }}>New moving request +</button>}{role == "mover" and <button className="btn btn-dark" onClick={lambda { navigate("profile"); }}>Company profile ↗</button>}</div></div><div className="stat-grid"><div><small>Active moves / leads</small><strong>{len(active)}</strong></div><div><small>Completed moves</small><strong>{len([b for b in bookings if b["status"] == "completed"])}</strong></div><div><small>Verified partners</small><strong>{len([m for m in movers if m["verified"]])}</strong></div></div>
+        {role == "mover" and len(ownMover) > 0 and not ownMover[0]["verified"] and <div className="alert alert-warning">Your company is awaiting verification. An admin must approve it before you can quote.</div>}
+        {role == "admin" and <div className="panel admin-panel"><h2>Moving partner verification</h2><p className="muted small">Demo verification controls. In a live service, review business registration, insurance and crew details first.</p>{[<div key={m["id"]} className="admin-row"><div><strong>{m["name"]}</strong><span className="small muted">{m["area"]} · {m["capacity"]} rooms · {money(m["rate"])} / room</span></div><span className={"status status-completed" if m["verified"] else "status status-requested"}>{"Verified" if m["verified"] else "Pending"}</span><button className="btn btn-outline btn-small" disabled={busy} onClick={lambda { perform("verify", {"mover_id": m["id"]}); }}>{"Revoke" if m["verified"] else "Verify partner"}</button></div> for m in movers]}</div>}
+        <div className="section-heading compact"><h2>{"Available leads & your jobs" if role == "mover" else "Moving requests"}</h2><span className="small muted">{len(bookings)} total</span></div><div className="booking-list">{[<BookingCard key={b["id"]} booking={b} role={role} onAction={perform} busy={busy}/> for b in bookings]}</div>{len(bookings) == 0 and <div className="empty-state"><span className="empty-icon">↗</span><h3>Your next move starts here.</h3><p>{"Post a request to receive quotes from verified movers." if role == "customer" else "New customer requests will appear here. Refresh to check for opportunities."}</p>{role == "customer" and <button className="btn" onClick={lambda { navigate("request"); }}>Plan a move</button>}</div>}</section>}
+        {page == "profile" and role == "mover" and <section className="section page-section narrow"><span className="eyebrow">YOUR MOVING BUSINESS</span><h1 className="page-title">Put your best crew forward.</h1><p className="muted">Profile changes require admin verification before quoting again.</p><form className="panel request-form" onSubmit={lambda e: FormEvent { e.preventDefault(); perform("profile", {"name": companyName, "area": companyArea, "bio": companyBio, "rate": companyRate, "capacity": companyCapacity, "services": companyServices}); }}><div className="form-grid"><label>Company name<input required value={companyName} onChange={lambda e: ChangeEvent { companyName = e.target.value; }}/></label><label>Service city<input required value={companyArea} onChange={lambda e: ChangeEvent { companyArea = e.target.value; }}/></label><label>Base price per room (KES)<input type="number" min="1000" max="100000" required value={companyRate} onChange={lambda e: ChangeEvent { companyRate = e.target.value; }}/></label><label>Maximum room capacity<input type="number" min="1" max="6" required value={companyCapacity} onChange={lambda e: ChangeEvent { companyCapacity = e.target.value; }}/></label></div><label>About your company<textarea maxLength={500} value={companyBio} onChange={lambda e: ChangeEvent { companyBio = e.target.value; }}/></label><label>Services (comma separated)<input value={companyServices} placeholder="packing,assembly,fragile" onChange={lambda e: ChangeEvent { companyServices = e.target.value; }}/></label><button className="btn btn-dark" disabled={busy} type="submit">Save for verification ↗</button></form></section>}
+        {page == "how" and <section className="section page-section"><span className="eyebrow">LESS STRESS. MORE FRESH STARTS.</span><h1 className="page-title">Your move, in good company.</h1><div className="steps-grid">{[<article key={i} className="panel"><span className="step-number">0{i + 1}</span><h2>{step[0]}</h2><p className="muted">{step[1]}</p></article> for (i, step) in enumerate([["Tell us your plans", "Share your route, date, inventory and budget. Our graph agent explains which verified movers fit your needs."], ["Choose your crew", "Receive firm quotes from independent movers. Compare scope and price, then accept the one that works for you."], ["Start your next chapter", "Follow confirmed, in-transit and completed stages. Record a demo deposit and leave a verified-booking review."]])]}</div><div className="agent-trace"><span className="agent-symbol">✳</span><div><h2>Thoughtful technology. Human decisions.</h2><p>Heha’s Jac agent traverses mover nodes, filters service and capacity requirements, scores the remaining teams and explains its recommendations. It never books or pays on your behalf.</p><p className="small muted">This hackathon MVP uses sample companies and simulated payments. Live M-Pesa, GPS tracking, insurance verification and notifications are future integrations.</p></div></div><button className="btn btn-dark" onClick={lambda { navigate("discover"); }}>Find my movers ↗</button></section>}
+        </main>
+        <footer className="site-footer"><div className="footer-top"><div><a className="brand" href="#" onClick={lambda e: MouseEvent { e.preventDefault(); navigate("discover"); }}><span className="brand-mark">h↗</span><span>heha<span className="brand-sub">MOVERS</span></span></a><p>A fresh start, in good hands.</p></div><div><span className="eyebrow">MADE FOR KENYA</span><p>Nairobi · Nakuru · Mombasa · Kisumu</p><span className="small muted">Connecting people to independent moving companies.</span></div></div><div className="footer-bottom"><span>© 2026 Heha Movers. Built with Jac.</span><span>JacHacks Kenya · Marketplace MVP</span></div></footer>
+    </div>;
 }
