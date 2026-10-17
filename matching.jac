@@ -37,7 +37,7 @@ walker MatchAgent {
             if estimate <= self.budget { score += 20.0; reasons.append("Indicative estimate within budget"); }
             else { score -= 10.0; reasons.append("Estimate above budget; request a firm quote"); }
         }
-        self.candidates.append({**m, "score": round(score, 1), "estimate": estimate, "reasons": reasons});
+        self.candidates.append({**m, "score": float(f"{score:.1f}"), "estimate": estimate, "reasons": reasons});
     }
 
     can explain with MoveNeed exit {

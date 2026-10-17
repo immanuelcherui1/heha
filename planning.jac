@@ -4,7 +4,6 @@ Each move becomes a graph of requirements. The walker evaluates each rule,
 records evidence, and produces a preparation plan. This deliberately avoids
 claiming to infer an exact distance, volume, insurance cover, or firm price.
 """
-import re;
 
 node PlanningContext {
     has inventory: str, rooms: int, packing: bool, budget: int;

@@ -1,10 +1,8 @@
 """Transactional storage and authentication. All application logic is Jac."""
 import sqlite3;
-import json;
 import os;
 import secrets;
 import hashlib;
-import hmac;
 import time;
 import from pathlib { Path }
 
@@ -65,6 +63,7 @@ def initialize() {
         CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,booking_id TEXT REFERENCES bookings(id),author_id TEXT REFERENCES users(id),author_name TEXT NOT NULL,author_role TEXT NOT NULL,body TEXT NOT NULL,created REAL NOT NULL);
         CREATE TABLE IF NOT EXISTS checklist(booking_id TEXT REFERENCES bookings(id),code TEXT NOT NULL,completed REAL NOT NULL,PRIMARY KEY(booking_id,code));
         """);
+        db.execute("BEGIN IMMEDIATE");
         if os.getenv("HEHA_DEMO", "1") == "1" and not rows(db, "SELECT id FROM users LIMIT 1") {
             seed_demo(db);
         }
