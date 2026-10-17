@@ -28,14 +28,14 @@ walker MatchAgent {
         services = str(m["services"]);
         if self.packing and "packing" not in services { skip; }
         estimate = int(m["rate"]) * self.size + (2500 if self.packing else 0);
-        score = float(m["rating"]) * 10 + (25 if local else 0);
-        reasons = ["Verified moving partner", f"Capacity for {self.size} room(s)"];
+        score: float = float(str(m["rating"])) * 10.0 + (25.0 if local else 0.0);
+        reasons: list[str] = ["Verified moving partner", f"Capacity for {self.size} room(s)"];
         if local { reasons.append("Local crew near pickup"); }
         else { reasons.append("Confirm out-of-area transport with mover"); }
         if self.packing { reasons.append("Packing service available"); }
         if self.budget > 0 {
-            if estimate <= self.budget { score += 20; reasons.append("Indicative estimate within budget"); }
-            else { score -= 10; reasons.append("Estimate above budget; request a firm quote"); }
+            if estimate <= self.budget { score += 20.0; reasons.append("Indicative estimate within budget"); }
+            else { score -= 10.0; reasons.append("Estimate above budget; request a firm quote"); }
         }
         self.candidates.append({**m, "score": round(score, 1), "estimate": estimate, "reasons": reasons});
     }
@@ -51,7 +51,7 @@ def rank_movers(profiles: list[dict], area: str, size: int, packing: bool, budge
     need = MoveNeed(area=area, size=size, packing=packing, budget=budget);
     for profile in profiles { need +>:EligibleRoute():+> MoverCandidate(profile=profile); }
     agent = need spawn MatchAgent();
-    ranked = sorted(agent.candidates, key=lambda m: dict : float(m["score"]), reverse=True);
+    ranked = sorted(agent.candidates, key=lambda m: dict : float(str(m["score"])), reverse=True);
     result = {"matches": ranked, "trace": agent.trace};
     # Graph is request-scoped: no user inventory or PII is persisted in the graph.
     for candidate in [need-->] { del candidate; }

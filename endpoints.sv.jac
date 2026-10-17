@@ -1,6 +1,8 @@
 """Public RPC boundary; every protected action validates its session and role."""
 import from store { initialize, connect, uid, rows, one, current_user, public_user, password_hash, add_user, require_role, event }
 import from matching { rank_movers }
+import from planning { build_plan }
+import from coordination { messages_for, send_message, toggle_task }
 import sqlite3;
 import secrets;
 import hashlib;
@@ -41,6 +43,9 @@ def dashboard(db: any, user: dict) -> dict {
         booking["events"] = rows(db, "SELECT * FROM events WHERE booking_id=? ORDER BY created", (booking["id"],));
         booking["payment"] = rows(db, "SELECT * FROM payments WHERE booking_id=?", (booking["id"],));
         booking["review"] = rows(db, "SELECT * FROM reviews WHERE booking_id=?", (booking["id"],));
+        booking["messages"] = messages_for(db, booking, user);
+        booking["plan"] = build_plan(str(booking["notes"]), int(booking["size"]), bool(booking["packing"]), int(booking["budget"]));
+        booking["checklist"] = [r["code"] for r in rows(db, "SELECT code FROM checklist WHERE booking_id=?", (booking["id"],))] if role == "customer" else [];
         # Mover leads intentionally expose route and requirements, never customer email.
     }
     return {"user": public_user(user), "bookings": bookings,
@@ -75,7 +80,9 @@ def execute(db: any, action: str, data: dict, token: str) -> dict {
     }
     if action == "match" {
         profiles = rows(db, "SELECT * FROM movers WHERE verified=1");
-        return rank_movers(profiles, text(data, "pickup", 120), number(data, "size", 1, 6), bool(data.get("packing", False)), number(data, "budget", 0, 1000000));
+        result = rank_movers(profiles, text(data, "pickup", 120), number(data, "size", 1, 6), bool(data.get("packing", False)), number(data, "budget", 0, 1000000));
+        result["plan"] = build_plan(text(data, "notes", 1000), number(data, "size", 1, 6), bool(data.get("packing", False)), number(data, "budget", 0, 1000000));
+        return result;
     }
     user = current_user(db, token);
     if action == "logout" {
@@ -109,6 +116,12 @@ def execute(db: any, action: str, data: dict, token: str) -> dict {
         return {};
     }
     booking = one(db, "SELECT * FROM bookings WHERE id=?", (text(data, "booking_id", 32),));
+    if action == "message" { return send_message(db, booking, user, text(data, "body", 1000)); }
+    if action == "checklist" {
+        plan = build_plan(str(booking["notes"]), int(booking["size"]), bool(booking["packing"]), int(booking["budget"]));
+        tasks = plan["tasks"] as list[dict];
+        return toggle_task(db, booking, user, text(data, "code", 40), [str(t["code"]) for t in tasks]);
+    }
     if action == "quote" {
         require_role(user, "mover"); mover = one(db, "SELECT * FROM movers WHERE user_id=?", (user["id"],));
         if not mover["verified"] { raise ValueError("An admin must verify your company before you can quote."); }

@@ -62,6 +62,8 @@ def initialize() {
         CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,booking_id TEXT REFERENCES bookings(id),actor TEXT NOT NULL,message TEXT NOT NULL,created REAL NOT NULL);
         CREATE TABLE IF NOT EXISTS payments(id TEXT PRIMARY KEY,booking_id TEXT UNIQUE REFERENCES bookings(id),amount INTEGER NOT NULL,reference TEXT NOT NULL,created REAL NOT NULL);
         CREATE TABLE IF NOT EXISTS reviews(id TEXT PRIMARY KEY,booking_id TEXT UNIQUE REFERENCES bookings(id),mover_id TEXT REFERENCES movers(id),rating INTEGER NOT NULL,comment TEXT NOT NULL,created REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,booking_id TEXT REFERENCES bookings(id),author_id TEXT REFERENCES users(id),author_name TEXT NOT NULL,author_role TEXT NOT NULL,body TEXT NOT NULL,created REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS checklist(booking_id TEXT REFERENCES bookings(id),code TEXT NOT NULL,completed REAL NOT NULL,PRIMARY KEY(booking_id,code));
         """);
         if os.getenv("HEHA_DEMO", "1") == "1" and not rows(db, "SELECT id FROM users LIMIT 1") {
             seed_demo(db);

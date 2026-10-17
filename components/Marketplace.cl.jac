@@ -1,4 +1,5 @@
 """Shared presentation and booking interactions, written in Jac."""
+import from .MovePlan { MovePlan }
 def:pub money(amount: any) -> str { return "KES " + str(amount); }
 
 def:pub MoverCard(mover: dict, index: int, matched: bool = False) -> JsxElement {
@@ -17,10 +18,11 @@ def:pub MoverCard(mover: dict, index: int, matched: bool = False) -> JsxElement 
 }
 
 def:pub BookingCard(booking: dict, role: str, onAction: Callable[[str, dict], any], busy: bool) -> JsxElement {
-    has amount: str = "15000", quoteMessage: str = "Transport, loading and unloading included.", rating: str = "5", comment: str = "", expanded: bool = False;
+    has amount: str = "15000", quoteMessage: str = "Transport, loading and unloading included.", rating: str = "5", comment: str = "", expanded: bool = False, planOpen: bool = False, messageBody: str = "";
     quotes = booking["quotes"] as list[dict]; events = booking["events"] as list[dict];
     payment = booking["payment"] as list[dict]; review = booking["review"] as list[dict];
     status = str(booking["status"]); bid = str(booking["id"]);
+    messages = booking["messages"] as list[dict];
     async def act(action: str, extra: dict) { await onAction(action, {"booking_id": bid, **extra}); }
     return <article className="booking-card">
         <div className="booking-top"><span className={"status status-" + status}>{status.replace("_", " ")}</span><small className="muted">#{bid[:6]}</small></div>
@@ -36,10 +38,13 @@ def:pub BookingCard(booking: dict, role: str, onAction: Callable[[str, dict], an
             {role == "mover" and status in ["confirmed", "in_transit"] and len([q for q in quotes if q["status"] == "accepted"]) > 0 and <button className="btn btn-dark" disabled={busy} onClick={lambda { act("progress", {}); }}>{"Mark as picked up" if status == "confirmed" else "Confirm delivery"}</button>}
             {role == "customer" and status in ["requested", "confirmed"] and <button className="btn btn-ghost danger" disabled={busy} onClick={lambda { if window.confirm("Cancel this moving request?") { act("cancel", {}); } }}>Cancel request</button>}
             <button className="btn btn-ghost" onClick={lambda { expanded = not expanded; }}>{"Hide history ↑" if expanded else "View history ↓"}</button>
+            {role == "customer" and <button className="btn btn-ghost" onClick={lambda { planOpen = not planOpen; }}>{"Hide move plan ↑" if planOpen else "My move plan ↓"}</button>}
         </div>
         {len(payment) > 0 and <p className="payment-note">✓ Demo deposit: {money(payment[0]["amount"])} · {payment[0]["reference"]}<br/><small>Simulation only. No money was charged.</small></p>}
         {role == "customer" and status == "completed" and len(review) == 0 and <div className="quote-composer"><h4>How was your move?</h4><div className="form-grid"><label>Rating<select aria-label="Review rating" value={rating} onChange={lambda e: ChangeEvent { rating = e.target.value; }}><option value="5">5 — Excellent</option><option value="4">4 — Good</option><option value="3">3 — Okay</option><option value="2">2 — Poor</option><option value="1">1 — Very poor</option></select></label><label>Your review<input aria-label="Review comment" value={comment} onChange={lambda e: ChangeEvent { comment = e.target.value; }} maxLength={500}/></label></div><button className="btn" disabled={busy} onClick={lambda { act("review", {"rating": rating, "comment": comment}); }}>Publish review</button></div>}
         {len(review) > 0 and <p className="payment-note">★ {review[0]["rating"]}/5 verified review · {review[0]["comment"]}</p>}
         {expanded and <ol className="timeline">{[<li key={evt["id"]}><strong>{evt["actor"]}</strong><span>{evt["message"]}</span></li> for evt in events]}</ol>}
+        {planOpen and role == "customer" and <MovePlan plan={booking["plan"] as dict} completed={booking["checklist"] as list[str]} onToggle={lambda code: str { act("checklist", {"code": code}); }} editable={status != "cancelled"} busy={busy}/>}
+        {role != "admin" and status in ["confirmed", "in_transit", "completed"] and (role == "customer" or len([q for q in quotes if q["status"] == "accepted"]) > 0) and <section className="booking-messages"><h4>Coordinate with your {"mover" if role == "customer" else "customer"}</h4><p className="small muted">Private to this customer and the assigned moving company. Refresh to check for new messages.</p><div className="message-list">{[<article key={msg["id"]} className={"message-bubble own-message" if msg["author_role"] == role else "message-bubble"}><strong>{msg["author_name"]}</strong><p>{msg["body"]}</p></article> for msg in messages]}</div><label>Booking message<textarea aria-label="Booking message" maxLength={1000} value={messageBody} placeholder="Confirm arrival time, parking or access details…" onChange={lambda e: ChangeEvent { messageBody = e.target.value; }}/></label><button className="btn btn-outline btn-small" disabled={busy or not messageBody.strip()} onClick={lambda { act("message", {"body": messageBody}); messageBody = ""; }}>Send message ↗</button></section>}
     </article>;
 }

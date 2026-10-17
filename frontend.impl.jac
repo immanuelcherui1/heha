@@ -1,7 +1,7 @@
 """Async actions for the Heha marketplace shell."""
 impl app.refresh(token: str) {
     action = "dashboard"; data: dict = {};
-    result = await marketplace(action, data, token);
+    result = await requestMarket(action, data, token);
     if not result["ok"] {
         sessionStorage.removeItem("heha_session"); session = ""; user = {};
         error = str(result["error"]); return;
@@ -18,10 +18,10 @@ impl app.perform(action: str, data: dict) {
     busy = True; error = ""; notice = "";
     try {
         token = session;
-        result = await marketplace(action, data, token);
+        result = await requestMarket(action, data, token);
         if not result["ok"] { error = str(result["error"]); }
         else {
-            notice = "Saved successfully."; await refresh(token);
+            await refresh(token); notice = "Saved successfully.";
             if action == "request" { page = "dashboard"; notice = "Your move is live. Compare quotes in your dashboard."; }
         }
     } except Exception { error = "Connection interrupted. Refresh to check the result before trying again."; }
@@ -32,7 +32,7 @@ impl app.authenticate(loginEmail: str, loginPassword: str, mode: str) {
     try {
         action = mode; token = "";
         data = {"email": loginEmail, "password": loginPassword, "name": name, "role": accountRole, "area": serviceArea};
-        result = await marketplace(action, data, token);
+        result = await requestMarket(action, data, token);
         if not result["ok"] { error = str(result["error"]); }
         else {
             newToken = str(result["data"]["token"]);
@@ -45,16 +45,16 @@ impl app.authenticate(loginEmail: str, loginPassword: str, mode: str) {
 impl app.logout() {
     try {
         action = "logout"; data: dict = {}; token = session;
-        await marketplace(action, data, token);
+        await requestMarket(action, data, token);
     } except Exception { }
     sessionStorage.removeItem("heha_session"); session = ""; user = {}; bookings = []; page = "discover"; notice = "You have signed out.";
 }
 impl app.findMatches(e: FormEvent) {
     e.preventDefault(); busy = True; error = "";
     try {
-        action = "match"; token = ""; data = {"pickup": pickup, "size": size, "packing": packing, "budget": budget};
-        result = await marketplace(action, data, token);
-        if result["ok"] { matches = result["data"]["matches"] as list[dict]; trace = result["data"]["trace"] as list[str]; page = "matches"; }
+        action = "match"; token = ""; data = {"pickup": pickup, "size": size, "packing": packing, "budget": budget, "notes": notes};
+        result = await requestMarket(action, data, token);
+        if result["ok"] { matches = result["data"]["matches"] as list[dict]; trace = result["data"]["trace"] as list[str]; movePlan = result["data"]["plan"] as dict; page = "matches"; }
         else { error = str(result["error"]); }
     } except Exception { error = "The matching agent is unavailable. Please try again."; }
     busy = False;
