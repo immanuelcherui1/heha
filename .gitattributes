@@ -1,0 +1,4 @@
+*.jac linguist-language=Jac
+*.css text eol=lf
+*.jac text eol=lf
+*.md text eol=lf

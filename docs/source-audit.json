@@ -1,0 +1,111 @@
+{
+  "metric": "authored source file bytes including tests, QA, CSS and Makefile",
+  "jac_bytes": 93387,
+  "other_source_bytes": 20901,
+  "jac_percent": 81.71,
+  "meets_local_80_percent_threshold": true,
+  "excludes": [
+    "dependencies",
+    "generated files",
+    "documentation",
+    "configuration",
+    "media"
+  ],
+  "files": [
+    {
+      "path": "Makefile",
+      "bytes": 682,
+      "language": "other"
+    },
+    {
+      "path": "components/Hero.cl.jac",
+      "bytes": 2552,
+      "language": "Jac"
+    },
+    {
+      "path": "components/Marketplace.cl.jac",
+      "bytes": 8820,
+      "language": "Jac"
+    },
+    {
+      "path": "components/MovePlan.cl.jac",
+      "bytes": 2248,
+      "language": "Jac"
+    },
+    {
+      "path": "coordination.jac",
+      "bytes": 2505,
+      "language": "Jac"
+    },
+    {
+      "path": "endpoints.sv.jac",
+      "bytes": 13238,
+      "language": "Jac"
+    },
+    {
+      "path": "frontend.cl.jac",
+      "bytes": 19140,
+      "language": "Jac"
+    },
+    {
+      "path": "frontend.impl.jac",
+      "bytes": 3386,
+      "language": "Jac"
+    },
+    {
+      "path": "main.jac",
+      "bytes": 296,
+      "language": "Jac"
+    },
+    {
+      "path": "matching.jac",
+      "bytes": 3074,
+      "language": "Jac"
+    },
+    {
+      "path": "planning.jac",
+      "bytes": 8390,
+      "language": "Jac"
+    },
+    {
+      "path": "qa/browser_workflow.jac",
+      "bytes": 8862,
+      "language": "Jac"
+    },
+    {
+      "path": "qa/recording.jac",
+      "bytes": 2441,
+      "language": "Jac"
+    },
+    {
+      "path": "qa/source_audit.jac",
+      "bytes": 1945,
+      "language": "Jac"
+    },
+    {
+      "path": "store.jac",
+      "bytes": 5966,
+      "language": "Jac"
+    },
+    {
+      "path": "styles.css",
+      "bytes": 20219,
+      "language": "CSS"
+    },
+    {
+      "path": "tests/coordination_tests.jac",
+      "bytes": 6011,
+      "language": "Jac"
+    },
+    {
+      "path": "tests/marketplace_tests.jac",
+      "bytes": 3500,
+      "language": "Jac"
+    },
+    {
+      "path": "transport.cl.jac",
+      "bytes": 1013,
+      "language": "Jac"
+    }
+  ]
+}

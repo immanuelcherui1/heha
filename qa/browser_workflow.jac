@@ -10,6 +10,7 @@ import secrets;
 import from pathlib { Path }
 import from datetime { date, timedelta }
 import from playwright.sync_api { sync_playwright }
+import from qa.recording { DemoRecorder }
 
 def sign_in(page: any, account: str) {
     signout = page.get_by_role("button", name="Sign out", exact=True);
@@ -26,7 +27,10 @@ def booking_card(page: any, marker: str) -> any {
 }
 
 def snapshot(page: any, destination: str, name: str) {
-    page.screenshot(path=destination + "/" + name + ".png", full_page=True);
+    page.screenshot(path=destination + "/" + name + ".png", full_page=os.getenv("HEHA_RECORD", "0") != "1");
+    if os.getenv("HEHA_RECORD", "0") == "1" {
+        page.wait_for_timeout(int(os.getenv("HEHA_PAUSE_MS", "1800")));
+    }
 }
 
 with entry:__main__ {
@@ -38,6 +42,9 @@ with entry:__main__ {
     browser = engine.chromium.launch(executable_path=os.getenv("HEHA_CHROMIUM", "/usr/bin/chromium"), headless=True, args=["--no-sandbox"], slow_mo=int(os.getenv("HEHA_SLOW_MO", "0")));
     context = browser.new_context(viewport={"width": 1440, "height": 1050});
     page = context.new_page(); page.set_default_timeout(15000);
+    recorder = DemoRecorder(directory=destination + "/recording");
+    recording = os.getenv("HEHA_RECORD", "0") == "1";
+    if recording { recorder.start(context, page); }
     errors: list[str] = [];
     page.on("pageerror", lambda exc: any { errors.append(str(exc)); });
     try {
@@ -137,6 +144,7 @@ with entry:__main__ {
         mobile.close();
         assert len(errors) == 0, str(errors);
         print("PASS: mobile layout has no horizontal overflow; no browser runtime errors");
+        if recording { print("Demo video: " + recorder.finish()); }
     } finally {
         context.close(); browser.close(); engine.stop();
     }
