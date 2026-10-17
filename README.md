@@ -35,8 +35,12 @@ Open the application URL printed by Jac. The client and API share the same origi
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `HEHA_DB` | `.jac/data/heha.sqlite3` | Local SQLite database file. Use durable managed storage and a transactional production database before launch. |
+| `HEHA_BOOTSTRAP_ADMIN_EMAIL` | unset | Optional one-time first-admin email. Provision via the hosting secret manager or JacHammer Settings, never chat or source control. |
+| `HEHA_BOOTSTRAP_ADMIN_PASSWORD` | unset | Optional first-admin password; must be at least 16 characters. Set alongside the email before the first application initialization. The initializer creates an admin only if no admin exists. |
 
-There are no provider credentials configured in this project. Do not enable customer payments until a provider and its marketplace collection, settlement, reconciliation, refund, callback-authentication and commercial requirements have been confirmed. Supply secrets only through the deployment platform's secret manager or JacHammer Settings, never source control or chat.
+To provision the initial administrator, set `HEHA_BOOTSTRAP_ADMIN_EMAIL` and a unique `HEHA_BOOTSTRAP_ADMIN_PASSWORD` (minimum 16 characters) through the hosting secret manager or JacHammer Settings, then restart the application so initialization runs. Register/login with that email and password, confirm the admin dashboard is available, then remove both bootstrap secrets and restart. The initializer is idempotent and does not create or reset an admin once any administrator exists; later admin recovery must use a separately controlled operator/database procedure. Never place credentials in source control or chat. Public registration accepts only customer and mover roles.
+
+There are no payment-provider credentials configured in this project. Do not enable customer payments until a provider and its marketplace collection, settlement, reconciliation, refund, callback-authentication and commercial requirements have been confirmed. Supply secrets only through the deployment platform's secret manager or JacHammer Settings, never source control or chat.
 
 The current SQLite initialization uses `CREATE TABLE IF NOT EXISTS`; a versioned schema migration framework, PostgreSQL adapter, operational backup schedule and tested restoration procedure remain outstanding. Do not point multiple production workers at a local SQLite file.
 

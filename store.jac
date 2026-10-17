@@ -64,6 +64,14 @@ def initialize() {
         CREATE TABLE IF NOT EXISTS checklist(booking_id TEXT REFERENCES bookings(id),code TEXT NOT NULL,completed REAL NOT NULL,PRIMARY KEY(booking_id,code));
         """);
         db.execute("BEGIN IMMEDIATE");
+        admin_email = os.getenv("HEHA_BOOTSTRAP_ADMIN_EMAIL", "").strip().lower();
+        admin_password = os.getenv("HEHA_BOOTSTRAP_ADMIN_PASSWORD", "");
+        if admin_email and admin_password and not rows(db, "SELECT id FROM users WHERE role='admin' LIMIT 1") {
+            if "@" not in admin_email or len(admin_password) < 16 {
+                raise ValueError("Bootstrap admin requires a valid email and password of at least 16 characters.");
+            }
+            add_user(db, "Platform Administrator", admin_email, admin_password, "admin");
+        }
     }
 }
 
