@@ -55,7 +55,7 @@ def dashboard(db: any, user: dict) -> dict {
 
 def execute(db: any, action: str, data: dict, token: str) -> dict {
     if action == "browse" {
-        return {"movers": rows(db, "SELECT * FROM movers WHERE verified=1 ORDER BY rating DESC"), "demo": __import__("os").getenv("HEHA_DEMO", "1") == "1"};
+        return {"movers": rows(db, "SELECT * FROM movers WHERE verified=1 ORDER BY rating DESC"), "demo": False};
     }
     if action in ["login", "register"] {
         email = text(data, "email", 160).lower(); password = text(data, "password", 128);
@@ -70,7 +70,7 @@ def execute(db: any, action: str, data: dict, token: str) -> dict {
             }
         }
         found = rows(db, "SELECT * FROM users WHERE email=?", (email,));
-        if not found or not hmac.compare_digest(str(found[0]["password_hash"]), password_hash(password, str(found[0]["salt"]))) {
+        if not found or not hmac.compare_digest(str(found[0]["password_hash"]).encode(), password_hash(password, str(found[0]["salt"])).encode()) {
             raise ValueError("Email or password is incorrect.");
         }
         user = found[0]; session = secrets.token_urlsafe(32);
@@ -154,14 +154,10 @@ def execute(db: any, action: str, data: dict, token: str) -> dict {
         if booking["status"] not in ["requested", "confirmed"] { raise ValueError("Only requested or confirmed moves can be cancelled."); }
         db.execute("UPDATE bookings SET status='cancelled' WHERE id=?", (booking["id"],));
         db.execute("UPDATE quotes SET status='cancelled' WHERE booking_id=?", (booking["id"],));
-        event(db, str(booking["id"]), str(user["name"]), "Booking cancelled. Any demo payment remains recorded for audit; no real money moved."); return {};
+        event(db, str(booking["id"]), str(user["name"]), "Booking cancelled. No payment was collected by this application."); return {};
     }
     if action == "pay" {
-        if booking["status"] != "confirmed" { raise ValueError("Confirm a quote before recording a demo deposit."); }
-        quote = one(db, "SELECT * FROM quotes WHERE id=?", (booking["accepted_quote"],));
-        amount = max(1, int(quote["amount"]) * 30 // 100);
-        db.execute("INSERT INTO payments VALUES(?,?,?,?,?)", (uid(), booking["id"], amount, "DEMO-" + secrets.token_hex(4).upper(), time.time()));
-        event(db, str(booking["id"]), str(user["name"]), "Demo 30% deposit recorded. No real M-Pesa transaction."); return {};
+        raise ValueError("Payments are not available yet. No payment has been taken or recorded. Contact support for payment arrangements.");
     }
     if action == "review" {
         if booking["status"] != "completed" { raise ValueError("Reviews are available after the move is completed."); }
@@ -183,7 +179,7 @@ def:pub marketplace(action: str, data: dict, token: str = "") -> dict {
         }
         return {"ok": True, "data": result};
     } except sqlite3.IntegrityError {
-        return {"ok": False, "error": "This email, payment or review already exists. Refresh and try again."};
+        return {"ok": False, "error": "This email or review already exists. Refresh and try again."};
     } except ValueError as exc {
         return {"ok": False, "error": str(exc)};
     }

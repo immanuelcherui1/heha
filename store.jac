@@ -64,9 +64,6 @@ def initialize() {
         CREATE TABLE IF NOT EXISTS checklist(booking_id TEXT REFERENCES bookings(id),code TEXT NOT NULL,completed REAL NOT NULL,PRIMARY KEY(booking_id,code));
         """);
         db.execute("BEGIN IMMEDIATE");
-        if os.getenv("HEHA_DEMO", "1") == "1" and not rows(db, "SELECT id FROM users LIMIT 1") {
-            seed_demo(db);
-        }
     }
 }
 
@@ -76,19 +73,3 @@ def add_user(db: any, name: str, email: str, password: str, role: str) -> str {
     return ident;
 }
 
-def seed_demo(db: any) {
-    add_user(db, "Alex Kamau", "customer@heha.demo", "HehaDemo2026!", "customer");
-    add_user(db, "Heha Operations", "admin@heha.demo", "HehaDemo2026!", "admin");
-    companies = [
-        ("Nairobi Swift Movers", "mover@heha.demo", "Nairobi", 6500, 4, 4.9, 128, "packing,assembly,fragile", "Careful crews. Clear prices. A fresh start, without the stress."),
-        ("Green Route Relocations", "green@heha.demo", "Nairobi", 4800, 3, 4.7, 86, "packing,eco", "Reusable crates and efficient routes for a lighter move."),
-        ("Rift Valley Movers", "rift@heha.demo", "Nakuru", 5500, 5, 4.8, 94, "packing,assembly,long-distance", "From the city to the Rift: dependable moves across Kenya."),
-        ("Coast Care Logistics", "coast@heha.demo", "Mombasa", 7200, 5, 4.8, 73, "packing,fragile,long-distance", "Coast-to-city relocation with a personal touch."),
-        ("Urban Carry", "urban@heha.demo", "Nairobi", 3200, 2, 4.6, 52, "assembly,small-moves", "Smart, affordable moves for studios and first homes."),
-        ("Lakeview Moving Co.", "lake@heha.demo", "Kisumu", 5000, 4, 4.7, 61, "packing,long-distance", "Local knowledge, nationwide reach. Your belongings in safe hands.")
-    ];
-    for c in companies {
-        owner = add_user(db, c[0], c[1], "HehaDemo2026!", "mover");
-        db.execute("INSERT INTO movers VALUES(?,?,?,?,?,?,?,?,?,?,?)", (uid(), owner, c[0], c[2], c[8], c[3], c[4], 1, c[5], c[6], c[7]));
-    }
-}

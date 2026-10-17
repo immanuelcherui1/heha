@@ -51,7 +51,7 @@ def rank_movers(profiles: list[dict], area: str, size: int, packing: bool, budge
     need = MoveNeed(area=area, size=size, packing=packing, budget=budget);
     for profile in profiles { need +>:EligibleRoute():+> MoverCandidate(profile=profile); }
     agent = need spawn MatchAgent();
-    ranked = sorted(agent.candidates, key=lambda m: dict : float(str(m["score"])), reverse=True);
+    ranked = sorted(agent.candidates, key=lambda (m: dict) { float(str(m["score"])); }, reverse=True);
     result = {"matches": ranked, "trace": agent.trace};
     # Graph is request-scoped: no user inventory or PII is persisted in the graph.
     for candidate in [need-->] { del candidate; }

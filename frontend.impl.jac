@@ -21,8 +21,8 @@ impl app.perform(action: str, data: dict) {
         result = await requestMarket(action, data, token);
         if not result["ok"] { error = str(result["error"]); }
         else {
-            await refresh(token); notice = "Saved successfully.";
-            if action == "request" { page = "dashboard"; notice = "Your move is live. Compare quotes in your dashboard."; }
+            await refresh(token); notice = "Your changes have been saved.";
+            if action == "request" { page = "dashboard"; notice = "Your request was published. It is an invitation to quote, not a confirmed booking."; }
         }
     } except Exception { error = "Connection interrupted. Refresh to check the result before trying again."; }
     busy = False;
