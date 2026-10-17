@@ -28,3 +28,10 @@ watchdog = ">=3.0.0"
 base_route_app = "app"
 
 [plugins.client]
+
+[jacpack]
+name = 'heha__1'
+description = 'Jac IDE snapshot for heha__1'
+
+[jachammer]
+project_id = "prj_619e4b63dacf4168a83b2aab7482e5ec"
